@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="A friendly calculator for estimating yarn when you swap yarns in a crochet or knitting pattern.">
+    <title>Yarnalytics | Find your yarn amount</title>
+    <style>
+        :root {
+            --ink: #202a2b;
+            --muted: #687575;
+            --paper: #f7f4ed;
+            --panel: #fffdf8;
+            --line: #d8ded6;
+            --coral: #d7654d;
+            --coral-dark: #a84436;
+            --sage: #b9cdbd;
+            --sage-dark: #40634e;
+            --yellow: #f1d477;
+            --shadow: 0 18px 40px rgba(47, 60, 55, 0.11);
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            color: var(--ink);
+            background: var(--paper);
+            font-family: Georgia, "Times New Roman", serif;
+            line-height: 1.5;
+        }
+
+        body::before {
+            content: "";
+            position: fixed;
+            inset: 0;
+            z-index: -1;
+            opacity: .38;
+            background-image: radial-gradient(#c4cfc4 1px, transparent 1px);
+            background-size: 18px 18px;
+            mask-image: linear-gradient(to bottom, #000, transparent 70%);
+        }
+
+        .shell { width: min(1120px, calc(100% - 32px)); margin: 0 auto; }
+
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: end;
+            gap: 24px;
+            padding: 44px 0 32px;
+        }
+
+        .eyebrow {
+            margin: 0 0 8px;
+            color: var(--coral-dark);
+            font: 700 .78rem/1.2 Arial, sans-serif;
+            letter-spacing: .14em;
+            text-transform: uppercase;
+        }
+
+        h1, h2, h3, p { margin-top: 0; }
+        h1 { max-width: 650px; margin-bottom: 8px; font-size: clamp(2.4rem, 6vw, 5.4rem); line-height: .96; font-weight: 500; letter-spacing: -.04em; }
+        h2 { margin-bottom: 8px; font-size: 1.65rem; line-height: 1.1; }
+        h3 { margin-bottom: 6px; font-size: 1.05rem; }
+        .intro { max-width: 590px; margin-bottom: 0; color: var(--muted); font-size: 1.08rem; }
+        .mark { color: var(--coral); }
+
+        .status {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px 13px;
+            border: 1px solid var(--line);
+            border-radius: 999px;
+            background: rgba(255, 253, 248, .78);
+            color: var(--muted);
+            font: 700 .76rem Arial, sans-serif;
+            white-space: nowrap;
+        }
+        .status::before { content: ""; width: 8px; height: 8px; border-radius: 50%; background: var(--sage-dark); }
+
+        main { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(300px, .8fr); gap: 22px; padding-bottom: 56px; }
+        .panel { padding: 28px; border: 1px solid var(--line); border-radius: 8px; background: rgba(255, 253, 248, .9); box-shadow: var(--shadow); }
+        .panel + .panel { margin-top: 22px; }
+        .panel-heading { display: flex; justify-content: space-between; gap: 16px; align-items: start; margin-bottom: 22px; }
+        .panel-heading p { margin-bottom: 0; color: var(--muted); font-size: .95rem; }
+        .step { flex: 0 0 auto; color: var(--coral); font: 700 .74rem Arial, sans-serif; letter-spacing: .1em; text-transform: uppercase; }
+
+        .input-group { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+        label { display: block; color: var(--muted); font: 700 .78rem Arial, sans-serif; letter-spacing: .03em; text-transform: uppercase; }
+        input[type="number"], input[type="text"] {
+            display: block;
+            width: 100%;
+            margin-top: 7px;
+            padding: 12px 13px;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            background: #fff;
+            color: var(--ink);
+            font: 1rem Georgia, serif;
+        }
+        textarea {
+            display: block;
+            width: 100%;
+            min-height: 118px;
+            margin-top: 7px;
+            padding: 12px 13px;
+            border: 1px solid var(--line);
+            border-radius: 4px;
+            resize: vertical;
+            background: #fff;
+            color: var(--ink);
+            font: 1rem/1.45 Georgia, serif;
+        }
+        input:focus-visible, textarea:focus-visible, button:focus-visible { outline: 3px solid rgba(215, 101, 77, .35); outline-offset: 2px; }
+        .unit { display: block; margin-top: 5px; color: var(--muted); font-size: .79rem; }
+
+        button {
+            width: 100%;
+            margin-top: 22px;
+            padding: 15px 18px;
+            border: 0;
+            border-radius: 4px;
+            background: var(--coral);
+            color: white;
+            font: 700 .82rem Arial, sans-serif;
+            letter-spacing: .08em;
+            text-transform: uppercase;
+            cursor: pointer;
+        }
+        button:hover { background: var(--coral-dark); }
+        .secondary-button { margin-top: 12px; background: var(--sage-dark); }
+        .secondary-button:hover { background: #2f4d3b; }
+
+        .result-panel { position: sticky; top: 18px; align-self: start; background: var(--ink); color: #f8f5ec; border-color: var(--ink); }
+        .result-panel .panel-heading p, .result-panel .step { color: #b9c9bc; }
+        .result-number { margin: 26px 0 2px; color: var(--yellow); font-size: clamp(3rem, 7vw, 5.2rem); line-height: .9; letter-spacing: -.05em; }
+        .result-label { color: #d2ddd2; font-size: 1rem; }
+        .result-divider { height: 1px; margin: 26px 0; background: rgba(255,255,255,.15); }
+        .result-panel h3 { color: #f8f5ec; }
+        #suggestions { margin: 0; padding: 0; list-style: none; }
+        #suggestions li { display: flex; justify-content: space-between; gap: 12px; padding: 10px 0; border-bottom: 1px solid rgba(255,255,255,.13); color: #e4ebe1; font-size: .94rem; }
+        #suggestions li span { color: #b9c9bc; font: .8rem Arial, sans-serif; }
+        .empty { color: #b9c9bc; font-size: .9rem; }
+        .message { min-height: 24px; margin: 14px 0 0; color: #f3b39f; font: .88rem Arial, sans-serif; }
+        .formula { margin: 28px 0 0; color: #b9c9bc; font-size: .82rem; }
+        .tag { display: inline-block; padding: 5px 8px; border-radius: 3px; background: var(--sage); color: var(--sage-dark); font: 700 .7rem Arial, sans-serif; letter-spacing: .05em; text-transform: uppercase; }
+        footer { padding: 0 0 30px; color: var(--muted); font-size: .86rem; }
+
+        @media (max-width: 800px) {
+            header { display: block; padding-top: 28px; }
+            .status { margin-top: 20px; }
+            main { grid-template-columns: 1fr; }
+            .result-panel { position: static; }
+        }
+        @media (max-width: 480px) {
+            .shell { width: min(100% - 22px, 1120px); }
+            .panel { padding: 20px; }
+            .input-group { grid-template-columns: 1fr; gap: 13px; }
+            h1 { font-size: 3rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <header>
+            <div>
+                <p class="eyebrow">Your yarn sidekick</p>
+                <h1>Make the yarn swap <span class="mark">easy.</span></h1>
+                <p class="intro">Tell us what the pattern needs and what yarn you have. We’ll do the comparison and estimate how much to buy.</p>
+            </div>
+            <div class="status">Runs in your browser</div>
+        </header>
+
+        <main>
+            <section>
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div><span class="tag">Step 01</span><h2>What does the pattern need?</h2><p>Copy the useful numbers from your pattern below. No crochet vocabulary quiz required.</p></div>
+                    </div>
+                    <label>Paste your pattern notes
+                        <textarea id="patternText" placeholder="Yarn: Wool Blend&#10;Weight: 4&#10;Yardage: 500 yards&#10;Gauge: 18 stitches / 20 rows&#10;Hook: 5mm"></textarea>
+                        <span class="unit">We’ll spot the weight, yardage, gauge, and hook size for you.</span>
+                    </label>
+                    <button id="parseButton" class="secondary-button" type="button">Find the pattern numbers</button>
+                    <div class="input-group">
+                        <label>Pattern yarn weight
+                            <input id="originalWeight" type="number" min="0" max="7" step="0.5" placeholder="4">
+                            <span class="unit">The yarn’s category, usually 0–7</span>
+                        </label>
+                        <label>Pattern yardage
+                            <input id="originalYardage" type="number" min="1" step="1" placeholder="500">
+                            <span class="unit">How many yards the original pattern uses</span>
+                        </label>
+                        <label>Pattern stitches
+                            <input id="originalStitches" type="number" min="0.1" step="0.1" placeholder="20">
+                            <span class="unit">Stitches in the pattern gauge</span>
+                        </label>
+                        <label>Pattern rows
+                            <input id="originalRows" type="number" min="0.1" step="0.1" placeholder="28">
+                            <span class="unit">Rows in the pattern gauge</span>
+                        </label>
+                        <label>Hook size <span style="font-weight: 400; text-transform: none;">(optional)</span>
+                            <input id="originalHook" type="text" placeholder="5mm">
+                            <span class="unit">Recorded for reference</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div class="panel">
+                    <div class="panel-heading">
+                        <div><span class="tag">Step 02</span><h2>What yarn are you using?</h2><p>Enter the numbers from your yarn label or your swatch.</p></div>
+                    </div>
+                    <div class="input-group" style="margin-top: 18px;">
+                        <label>Your yarn weight
+                            <input id="yourWeight" type="number" min="0" max="7" step="0.5" placeholder="4">
+                            <span class="unit">Pick the closest yarn category</span>
+                        </label>
+                        <label>Yardage per ball <span style="font-weight: 400; text-transform: none;">(optional)</span>
+                            <input id="yourBallYardage" type="number" min="1" step="1" placeholder="200">
+                            <span class="unit">Helps us count how many balls to buy</span>
+                        </label>
+                        <label>Your stitches
+                            <input id="yourStitches" type="number" min="0.1" step="0.1" placeholder="20">
+                            <span class="unit">Stitches in your swatch gauge</span>
+                        </label>
+                        <label>Your rows
+                            <input id="yourRows" type="number" min="0.1" step="0.1" placeholder="28">
+                            <span class="unit">Rows in your swatch gauge</span>
+                        </label>
+                        <label>Your hook size <span style="font-weight: 400; text-transform: none;">(optional)</span>
+                            <input id="yourHook" type="text" placeholder="5mm">
+                            <span class="unit">Recorded for reference</span>
+                        </label>
+                    </div>
+                    <button id="calculateButton" type="button">Show me the yarn math</button>
+                    <p id="message" class="message" role="alert"></p>
+                </div>
+            </section>
+
+            <aside class="panel result-panel" aria-live="polite">
+                <div class="panel-heading">
+                    <div><span class="step">Your result</span><h2>Let’s see what you need.</h2><p>Fill in both sets of numbers and we’ll work out the swap.</p></div>
+                </div>
+                <div class="result-number" id="resultYardage">—</div>
+                <div class="result-label">estimated yards to make the project</div>
+                <div id="ballResult" class="result-label" style="margin-top: 8px;"></div>
+                <div class="result-divider"></div>
+                <h3>Yarns worth a look</h3>
+                <ul id="suggestions"><li class="empty">Your closest yarn matches will appear here.</li></ul>
+                <p class="formula">We compare the pattern gauge with your gauge, then adjust the yardage.</p>
+            </aside>
+        </main>
+        <footer>Yarnalytics is a planning aid. Swatch first, especially for fitted garments and textured patterns.</footer>
+    </div>
+
+    <script>
+        (() => {
+            const yarns = [
+                { name: "Meadow Merino", weight: 3, yardage: 210 },
+                { name: "Harbor Wool", weight: 4, yardage: 200 },
+                { name: "Cedar House Acrylic", weight: 4, yardage: 250 },
+                { name: "Field Linen Blend", weight: 5, yardage: 180 },
+                { name: "Cloud Sock", weight: 2, yardage: 400 }
+            ];
+
+            const $ = (id) => document.getElementById(id);
+            const fields = ["originalWeight", "originalYardage", "originalStitches", "originalRows", "yourWeight", "yourStitches", "yourRows"];
+
+            function numberValue(id) {
+                return Number.parseFloat($(id).value);
+            }
+
+            function calculate() {
+                const values = Object.fromEntries(fields.map((id) => [id, numberValue(id)]));
+                const missing = fields.filter((id) => !Number.isFinite(values[id]) || values[id] <= 0);
+                if (missing.length) {
+                    $("message").textContent = "Add a positive value to every calculator field before estimating.";
+                    return;
+                }
+
+                const estimate = values.originalYardage * (values.originalStitches / values.yourStitches) * (values.originalRows / values.yourRows);
+                $("resultYardage").textContent = Math.ceil(estimate).toLocaleString();
+                const ballYardage = numberValue("yourBallYardage");
+                $("ballResult").textContent = ballYardage > 0 ? `About ${Math.ceil(estimate / ballYardage)} ball${Math.ceil(estimate / ballYardage) === 1 ? "" : "s"} at ${ballYardage} yd each` : "Add ball yardage to estimate number of balls";
+                $("message").textContent = "Estimate updated. Give yourself a little extra for swatching and matching dye lots.";
+
+                const matches = yarns.filter((yarn) => Math.abs(yarn.weight - values.yourWeight) <= 0.5).sort((a, b) => Math.abs(a.weight - values.yourWeight) - Math.abs(b.weight - values.yourWeight));
+                $("suggestions").innerHTML = matches.length ? matches.map((yarn) => `<li>${yarn.name}<span>weight ${yarn.weight} · ${yarn.yardage} yd</span></li>`).join("") : '<li class="empty">No close matches in the sample catalog.</li>';
+            }
+
+            function parsePatternText() {
+                const text = $("patternText").value.toLowerCase().replace(/,/g, "");
+                const yardage = text.match(/(?:yardage|yards?|yds?)\D{0,20}(\d{2,5})/);
+                const weight = text.match(/(?:weight|category)\D{0,10}([0-7](?:\.5)?)/);
+                const gauge = text.match(/(\d+(?:\.\d+)?)\s*(?:stitches|sts)\s*(?:\/|per)\s*(\d+(?:\.\d+)?)\s*rows?/);
+                const hook = text.match(/(?:hook|needle)\D{0,10}(\d+(?:\.\d+)?\s*mm)/);
+                if (yardage) $("originalYardage").value = yardage[1];
+                if (weight) $("originalWeight").value = weight[1];
+                if (gauge) {
+                    $("originalStitches").value = gauge[1];
+                    $("originalRows").value = gauge[2];
+                }
+                if (hook) $("originalHook").value = hook[1];
+                const found = yardage || weight || gauge || hook;
+                $("message").textContent = found ? "Pattern details filled in. Check the numbers, then add your yarn." : "I could not find numbers in that text. Try labels like Weight, Yardage, Gauge, and Hook.";
+            }
+
+            $("parseButton").addEventListener("click", parsePatternText);
+            $("calculateButton").addEventListener("click", calculate);
+            fields.concat(["yourBallYardage"]).forEach((id) => $(id).addEventListener("input", () => { $("message").textContent = ""; }));
+        })();
+    </script>
+</body>
+</html>
